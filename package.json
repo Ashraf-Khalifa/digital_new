@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node app.js", 
-    "build": "echo 'Add your build command here'"
+    "build": "node app.js" 
   },
   "author": "",
   "license": "ISC",
