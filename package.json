@@ -4,8 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node app.js", 
-    "build": "node app.js" 
+    "build": "your-build-command-here" 
   },
+  
   "author": "",
   "license": "ISC",
   "keywords": [],
