@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node app.js",
-    "build": "npm install && npm run build"  
+    "custom-build": "your-custom-build-script", 
+    "build": "npm run custom-build"
   },
   
   "author": "",
