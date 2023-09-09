@@ -3,16 +3,15 @@ const mysql = require("mysql");
 // Create a connection to the database
 const dbConnection = mysql.createConnection({
   host: "db-mysql-nyc1-44248-do-user-14618823-0.b.db.ondigitalocean.com",
-  port : "25060",
+  port: "25060",
   user: "doadmin",
   password: "123.123.",
   database: "defaultdb",
-  ssl: true
+  ssl: true,
 });
 
-
 // username = doadmin
-// password = AVNS_rKIVRu72xr-tbkqt4zi 
+// password = AVNS_rKIVRu72xr-tbkqt4zi
 
 // host = db-mysql-nyc1-44248-do-user-14618823-0.b.db.ondigitalocean.com
 // port = 25060
