@@ -1,32 +1,38 @@
-const express = require('express');
-const createError = require('http-errors');
-const morgan = require('morgan');
-require('dotenv').config();
+require('dotenv').config(); // Load environment variables from .env file
 
+const express = require('express');
+const morgan = require('morgan');
 const app = express();
-const PORT = process.env.PORT || 3000; // Use the provided PORT variable or default to 3000
+
+// Use the 'morgan' middleware for logging HTTP requests
+app.use(morgan('dev'));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(morgan('dev'));
 
-app.get('/', async (req, res, next) => {
+// Include and use your routes here
+const authRoutes = require('./Routes/authRoutes');
+const userRoutes = require('./Routes/userRoutes');
+
+app.use('/auth', authRoutes);
+app.use('/user', userRoutes);
+
+app.get('/', (req, res) => {
   res.send({ message: 'Awesome it works 🐻', my_env_var: process.env.MY_VAR });
 });
 
-// Include your routes here
-app.use('/api', require('./routes/api.route'));
-
+// Error handling middleware
 app.use((req, res, next) => {
-  next(createError.NotFound());
+  res.status(404).json({ message: 'Not Found' });
 });
 
 app.use((err, req, res, next) => {
-  res.status(err.status || 500);
-  res.send({
-    status: err.status || 500,
-    message: err.message,
-  });
+  console.error(err);
+  res.status(err.status || 500).json({ message: err.message });
 });
 
-app.listen(PORT, () => console.log(`🚀 Server is listening on port ${PORT}`));
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
