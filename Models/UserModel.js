@@ -9,12 +9,7 @@ const dbConnection = mysql.createConnection({
   database: "defaultdb",
   ssl: true
 });
-// const dbConnection = mysql.createConnection({
-//   host: "localhost",
-//   user: "root",
-//   password: "",
-//   database: "sql_register",
-// });
+
 
 dbConnection.connect((err) => {
   if (err) {

@@ -9,19 +9,7 @@ const dbConnection = mysql.createConnection({
   database: "defaultdb",
   ssl: true,
 });
-// const dbConnection = mysql.createConnection({
-//   host: "localhost",
-//   user: "root",
-//   password: "",
-//   database: "sql_register",
-// });
-// username = doadmin
-// password = AVNS_rKIVRu72xr-tbkqt4zi
 
-// host = db-mysql-nyc1-44248-do-user-14618823-0.b.db.ondigitalocean.com
-// port = 25060
-// database = defaultdb
-// sslmode = REQUIRED
 
 dbConnection.connect((err) => {
   if (err) {
