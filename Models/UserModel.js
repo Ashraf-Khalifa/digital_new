@@ -1,13 +1,19 @@
 const mysql = require("mysql");
 
 // Create a connection to the database
+// const dbConnection = mysql.createConnection({
+//   host: "db-mysql-nyc1-44248-do-user-14618823-0.b.db.ondigitalocean.com",
+//   port : "25060",
+//   user: "doadmin",
+//   password: "123.123.",
+//   database: "defaultdb",
+//   ssl: true
+// });
 const dbConnection = mysql.createConnection({
-  host: "db-mysql-nyc1-44248-do-user-14618823-0.b.db.ondigitalocean.com",
-  port : "25060",
-  user: "doadmin",
-  password: "123.123.",
-  database: "defaultdb",
-  ssl: true
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "sql_register",
 });
 
 dbConnection.connect((err) => {
@@ -28,15 +34,16 @@ class UserModel {
     dbConnection.query(getUserQuery, [userId], callback);
   }
 
-  static updateUserById(userId, updatedData, callback) {
-    const updateUserQuery = `
+  static updateUserToken(email, token, callback) {
+    const updateTokenQuery = `
       UPDATE users
-      SET ? 
-      WHERE id = ?
+      SET token = ?
+      WHERE email = ?
     `;
-
-    dbConnection.query(updateUserQuery, [updatedData, userId], callback);
+  
+    dbConnection.query(updateTokenQuery, [token, email], callback);
   }
+  
 
   static deleteUserById(userId, callback) {
     const deleteUserQuery = `
@@ -58,12 +65,15 @@ class UserModel {
 
   static insertUserInfo(values, callback) {
     const userInfoQuery = `
-      INSERT INTO users (photoUrl, fullName, number, gender, birthdate, nationality, city, password, email)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (photoUrl, fullName, number, gender, birthdate, nationality, city, password, email, token, verify)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
+  
     dbConnection.query(userInfoQuery, values, callback);
   }
-}
+
+
+  }
+
 
 module.exports = UserModel;

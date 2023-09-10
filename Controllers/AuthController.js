@@ -3,6 +3,9 @@ const crypto = require("crypto");
 const EmailModel = require("../Models/EmailModel");
 const UserModel = require("../Models/UserModel");
 
+// Store temporary tokens (temporary emails) in memory
+const temporaryTokens = new Map();
+
 function generateToken(length) {
   const bytes = crypto.randomBytes(Math.ceil(length / 2));
   return bytes.toString("hex").slice(0, length);
@@ -11,6 +14,7 @@ function isValidEmail(email) {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailPattern.test(email);
 }
+
 class AuthController {
   static async sendOTP(req, res) {
     const { email } = req.body;
@@ -20,38 +24,36 @@ class AuthController {
       return res.status(400).json({ message: "Please enter a valid email" });
     }
 
+    // Generate a temporary token (temporary email) for OTP purposes
+    const temporaryToken = generateToken(20);
+
+    // Store the temporary token in memory
+    temporaryTokens.set(temporaryToken, email);
+
     // Generate a fixed OTP for demonstration purposes
     const otp = "123456";
 
-    // Insert the email and OTP into the 'email' table
-    EmailModel.insertEmail(email, otp, (err, emailResult) => {
-      if (err) {
-        console.error("Database Error:", err);
-        return res
-          .status(500)
-          .json({ message: "Error inserting email and OTP" });
-      }
+    // Send the OTP to the temporary token (temporary email)
+    // For demonstration purposes, I'll just log the OTP
+    console.log(`OTP for email ${temporaryToken}: ${otp}`);
 
-      return res.json({ message: "OTP Sent Successfully" });
-    });
+    // Return the temporary token in the response
+    return res.json({ message: "OTP Sent Successfully", temporaryToken });
   }
 
   static async verifyOTP(req, res) {
-    const { otp } = req.body;
+    const { otp, temporaryToken } = req.body;
 
-    // Query the 'email' table to verify OTP
-    EmailModel.getEmailByOTP(otp, (err, emailResults) => {
-      if (err) {
-        console.error("Database Error:", err);
-        return res.status(500).json({ message: "An error occurred" });
-      }
+    // Check if the OTP and temporary token match for the same email
+    if (temporaryTokens.has(temporaryToken) && otp === "123456") {
+      // Remove the used temporary token from memory
+      const email = temporaryTokens.get(temporaryToken);
+      temporaryTokens.delete(temporaryToken);
 
-      if (emailResults.length === 0) {
-        return res.status(401).json({ message: "Email verification failed" });
-      }
+      return res.status(200).json({ message: "OTP verification successful", email });
+    }
 
-      return res.status(200).json({ message: emailResults[0] });
-    });
+    return res.status(401).json({ message: "OTP verification failed" });
   }
 
   static async signup(req, res) {
@@ -70,29 +72,25 @@ class AuthController {
       } = req.body;
 
       if (!fullName || !password) {
-        throw new Error("All fields must be filled");
+        return res.status(400).json({
+          data: null,
+          success: false,
+          errors: {
+            password: "Email or password are empty",
+          },
+        });
       }
-
       const salt = await bcrypt.genSalt(10);
       const hash = await bcrypt.hash(password, salt);
 
       const token = generateToken(20);
 
-      // Update the 'email' table with the token and set verify to 1
-      EmailModel.updateEmailToken(email, token, (err, infoResults) => {
-        if (err) {
-          console.error("Database Error:", err);
-          return res.status(500).json({ message: "Error inserting user info" });
-        }
-
-        return res
-          .status(200)
-          .json({ message: "Generated token is inserted successfully" });
-      });
+      // Set the 'verify' field to 1
+      const verify = 1;
 
       const userInfoQuery = `
-        INSERT INTO users (photoUrl, fullName, number, gender, birthdate, nationality, city, password, email)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (photoUrl, fullName, number, gender, birthdate, nationality, city, password, email, token, verify)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const values = [
@@ -105,13 +103,41 @@ class AuthController {
         city,
         hash,
         email,
+        token,
+        verify, // Set 'verify' to 1
       ];
 
       UserModel.insertUserInfo(values, (err, infoResults) => {
         if (err) {
           console.error("Database Error:", err);
-          return res.status(500).json({ message: "Error inserting user info" });
+          return res.status(500).json({
+            data: null,
+            success: false,
+            errors: {
+              database: "Please verify your password and email",
+            },
+          });
         }
+
+        // Construct the user data to return
+        const Data = {
+          photoUrl,
+          fullName,
+          number,
+          gender,
+          birthdate,
+          nationality,
+          city,
+          email,
+          token,
+        };
+
+        // Return a success message along with the user data and token
+        return res.status(200).json({
+          data: Data,
+          success: true,
+          errors: {},
+        });
       });
     } catch (error) {
       console.error("Error:", error);
@@ -121,53 +147,94 @@ class AuthController {
     }
   }
 
+
+  
+
   static async login(req, res) {
     console.log("Request received for /login");
     const { email, password } = req.body;
-
+  
     if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required" });
+      return res.status(400).json({
+        data: null,
+        success: false,
+        errors: {
+          authentication: "Email or password are empty",
+        },
+      });
     }
-
+  
     const getUserQuery = `
-      SELECT id, email, password, fullName, photoUrl, number, gender, birthdate, nationality, city
+      SELECT email, password, fullName, photoUrl, number, gender, birthdate, nationality, city
       FROM users
       WHERE email = ? 
     `;
-
+  
     UserModel.getUserByEmail(email, async (err, results) => {
       if (err) {
         console.error("Database Error:", err);
-        return res.status(500).json({ message: "An error occurred" });
+        return res.status(500).json({
+          data: null,
+          success: false,
+          errors: {
+            database: "app.database_error",
+          },
+        });
       }
-
+  
       if (results.length === 0) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        return res.status(401).json({
+          data: null,
+          success: false,
+          errors: {
+            authentication: "app.invalid_email_password",
+          },
+        });
       }
-
+  
       const user = results[0];
       const isPasswordValid = await bcrypt.compare(password, user.password);
-
+  
       if (!isPasswordValid) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        return res.status(401).json({
+          data: null,
+          success: false,
+          errors: {
+            authentication: "app.invalid_email_password",
+          },
+        });
       }
-
+  
       const token = generateToken(20);
-
+  
       // Update the 'email' table with the token and set verify to 1
       EmailModel.updateEmailToken(email, token, (err, infoResults) => {
         if (err) {
           console.error("Database Error:", err);
-          return res.status(500).json({ message: "Error inserting user info" });
+          return res.status(500).json({
+            data: null,
+            success: false,
+            errors: {
+              database: "Please verify your password and email",
+            },
+          });
         }
+  
+        // Update the user object with the new token
+        user.token = token;
+  
+        // Exclude the 'id' field from the user object
+        delete user.id;
+  
+        return res.status(200).json({
+          data: user, // You can send the user object as data
+          success: true,
+          errors: {},
+        });
       });
-
-      return res.status(200).json({ message: "Login successful", token, user });
     });
   }
-
+  
   static async logout(req, res) {
     const { token } = req.body;
 
